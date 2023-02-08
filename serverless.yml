@@ -31,6 +31,12 @@ functions:
       - httpApi:
           path: /get
           method: get
+  getWebpage:
+    handler: getCustomers.getWebpage
+    events: 
+      - httpApi:
+          path: /web
+          method: get
   api:
     handler: handler.handler
     events:

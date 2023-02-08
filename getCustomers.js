@@ -29,3 +29,14 @@ module.exports.getCustomers = async (event) => {
   }
 
 }
+
+module.exports.getWebpage = async (event) => {
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      total: 10,
+      items: "edd"
+    })
+  }
+
+}
