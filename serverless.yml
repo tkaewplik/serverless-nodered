@@ -8,6 +8,7 @@ provider:
   runtime: nodejs14.x
   environment:
     DYNAMODB_CUSTOMER_TABLE: ${self:service}-customerTable-${sls:stage}
+    DYNAMODB_SENSOR_TABLE: ${self:service}-sensor-2-${sls:stage}
   iamRoleStatements:
     - Effect: "Allow"
       Action:
@@ -16,7 +17,17 @@ provider:
         - "dynamodb:Scan*"
         - "dynamodb:UpdateItem"
         - "dynamodb:DeleteItem"
-      Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-customerTable-${sls:stage}
+      Resource: 
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-customerTable-${sls:stage}
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:Get*"
+        - "dynamodb:Scan*"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+      Resource: 
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-sensor-2-${sls:stage}
 
 functions:
   createCustomer:
@@ -25,6 +36,20 @@ functions:
       - httpApi:
           path: /create
           method: post
+  putSensorData:
+    handler: putSensorData.putSensorData
+    events:
+      - alexaSkill
+      - httpApi:
+          path: /sensor
+          method: post
+  getSensorData:
+    handler: getSensorData.getSensorData
+    events:
+      - alexaSkill
+      - httpApi:
+          path: /sensor
+          method: get
   getCustomers:
     handler: getCustomers.getCustomers
     events: 
@@ -58,20 +83,49 @@ custom:
       convertEmptyValues: true
     # Uncomment only if you already have a DynamoDB running locally
     # noStart: true
+    
+    seed:
+      test:
+        sources:
+          - table: ${self:service}-sensor-2-${sls:stage}
+            rawsources: [./seed/fake-sensor-data.json]
+
 
 resources:
   Resources:
+  
     CustomerTable:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
           - AttributeName: primary_key
             AttributeType: S
-        BillingMode: PAY_PER_REQUEST
         KeySchema:
           - AttributeName: primary_key
             KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
         TableName: ${self:service}-customerTable-${sls:stage}
+
+    SensorTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: sensor_id
+            AttributeType: N
+          - AttributeName: sensor_timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: sensor_id
+            KeyType: HASH
+          - AttributeName: sensor_timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: ${self:service}-sensor-2-${sls:stage}
 plugins:
   - serverless-offline
   - serverless-dynamodb-local
+  - serverless-local-dev-server
